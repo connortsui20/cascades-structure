@@ -1,5 +1,15 @@
+use super::StaticRule;
 use crate::{Expression, Join, LogicalExpression};
 use std::sync::Arc;
+
+/// Static transformation rules transforming logical expressions into equivalent but different
+/// logical expressions.
+///
+/// TODO:
+/// We may want to represent this differently to keep track of promise values.
+/// Should this allow easy reordering of the rules?
+static STATIC_TRANSFORMATION_RULES: [StaticRule; 2] =
+    [join_commutativity, join_right_associativity];
 
 /// A rule that defines join commutativity.
 ///
