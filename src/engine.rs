@@ -1,8 +1,12 @@
 use crate::{Expression, Group, Memo};
+use scc::Stack;
 use std::sync::{Arc, RwLock};
+
+pub enum Task {}
 
 struct SearchEngine {
     memo: Arc<RwLock<Memo>>,
+    tasks: Stack<Task>,
 }
 
 impl SearchEngine {
