@@ -19,25 +19,29 @@ pub fn join_commutativity(expr: &Arc<Expression>) -> Option<Arc<Expression>> {
     )))
 }
 
+/// A rule that defines join right associativity.
+///
+/// `Join(Join(A, B), C)` is logically equivalent to `Join(A, Join(B, C))`.
 pub fn join_right_associativity(expr: &Arc<Expression>) -> Option<Arc<Expression>> {
     let Expression::LogicalExpression(LogicalExpression::Join(top_join)) = expr.as_ref() else {
         return None;
     };
 
-    let Expression::LogicalExpression(LogicalExpression::Join(right_join)) =
-        top_join.right.as_ref()
+    let Expression::LogicalExpression(LogicalExpression::Join(left_join)) =
+        top_join.left.as_ref()
     else {
         return None;
     };
 
+
     let new_right_join = Join {
-        left: right_join.right.clone(),
-        right: right_join.left.clone(),
+        left: left_join.right.clone(),
+        right: top_join.right.clone(),
         join_type: (),
     };
 
     let new_top_join = Join {
-        left: top_join.left.clone(),
+        left: left_join.left.clone(),
         right: Arc::new(Expression::LogicalExpression(LogicalExpression::Join(
             new_right_join,
         ))),
