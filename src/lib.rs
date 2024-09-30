@@ -34,7 +34,7 @@ impl Expression {
     /// take on, ordered by their promise values.
     ///
     /// TODO:
-    /// Should we store the `Guidance` inside the `Expression` tree or separately?
+    /// Should we store the `Guidance` inside the `Expression` tree or in the memo table?
     pub fn moves<I>(self: &Arc<Expression>, _guidance: &Guidance) -> I
     where
         I: Iterator<Item = Arc<Expression>>,
@@ -43,8 +43,8 @@ impl Expression {
     }
 
     /// Returns the group / equivalence class of the current expression.
-    pub fn group(self: Arc<Expression>) -> Arc<Group> {
-        todo!()
+    pub fn group(self: Arc<Expression>, memo: Arc<Memo>) -> Arc<Group> {
+        todo!("Figure out the `GroupKey` of the current `Expression` and find the group in memo")
     }
 }
 
@@ -96,6 +96,11 @@ pub struct Group {
     /// The equivalent expressions that belong to this group / equivalence class.
     expressions: Arc<RwLock<Vec<Arc<Expression>>>>,
 
+    /// An alternative if we want to store the `Guidance` objects right next to where the
+    /// expressions are getting stored.
+    /// Might even want to put locking on each individual expression within this equivalence class.
+    expressions_alternative: Arc<RwLock<Vec<(Guidance, Arc<Expression>)>>>,
+
     /// By storing this in an atomic `ArcSwapOption`, we can ensure atomic changes to both the
     /// expression and the cost associated with that expression.
     winner: ArcSwapOption<Winner>,
@@ -117,10 +122,7 @@ pub struct GroupKey {
 ///   fine level of granular locking. What probably makes the most sense is storing 1 rwlock for
 ///   every group / equivalence class, and having guidance be implemented via atomic types is (using
 ///   a lot of compare-and-swaps + fetch_update) is likely sufficient.
-///
-/// - Ideally, a task / job should be able to run independently of all other tasks so that tasks
-///   are not waiting on each other for long stretches of execution.
 pub struct Memo {
     /// A concurrent hash table mapping [`GroupKey`]s to [`Group`]s.
-    table: DashMap<GroupKey, Group>,
+    table: DashMap<GroupKey, Arc<Group>>,
 }

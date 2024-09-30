@@ -4,8 +4,8 @@ use crate::{Join, LogicalExpression, Scan};
 use super::*;
 
 #[test]
-fn basic() {
-    let table1 = Arc::new(Expression::Logical(LogicalExpression::Scan(Scan {
+fn basic_transformation() {
+    let table1: Arc<Expression> = Arc::new(Expression::Logical(LogicalExpression::Scan(Scan {
         table_id: 1,
         filters: (),
     })));
@@ -22,7 +22,6 @@ fn basic() {
     })));
 
     // Have to use the `as StaticRule` to coerce correctly.
-    // See: https://github.com/rust-lang/rust/issues/62385
     let rule = transformation::join_commutativity as StaticRule;
 
     let commute_join = join
