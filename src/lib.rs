@@ -2,6 +2,7 @@ use arc_swap::ArcSwapOption;
 use dashmap::DashMap;
 use enum_dispatch::enum_dispatch;
 use rules::Rule;
+use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicU8;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
@@ -25,6 +26,11 @@ pub enum Expression {
 }
 
 impl Expression {
+    /// Checks if the pattern matches the given expression.
+    pub fn check_pattern<R: Rule>(self: &Arc<Expression>, rule: R) -> bool {
+        rule(self).is_some()
+    }
+
     /// Transforms the given input according to a rule, if possible.
     pub fn transform<R: Rule>(self: &Arc<Expression>, rule: R) -> Option<Arc<Expression>> {
         rule(self)
@@ -94,16 +100,20 @@ pub struct Winner {
 ///   to each other in the memo table?
 pub struct Group {
     /// The equivalent expressions that belong to this group / equivalence class.
-    expressions: Arc<RwLock<Vec<Arc<Expression>>>>,
-
-    /// An alternative if we want to store the `Guidance` objects right next to where the
-    /// expressions are getting stored.
+    ///
+    /// TODO:
     /// Might even want to put locking on each individual expression within this equivalence class.
-    expressions_alternative: Arc<RwLock<Vec<(Guidance, Arc<Expression>)>>>,
+    expressions: RwLock<Vec<Arc<Expression>>>,
+
+    /// Since `Guidance` should be thread-safe, we don't need to protect it with a lock.
+    guides: Vec<Guidance>,
 
     /// By storing this in an atomic `ArcSwapOption`, we can ensure atomic changes to both the
     /// expression and the cost associated with that expression.
     winner: ArcSwapOption<Winner>,
+
+    /// A flag that represents if exploration of this group has finished.
+    explored: AtomicBool,
 }
 
 /// The lookup key for a `Group`.
