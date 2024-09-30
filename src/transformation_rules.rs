@@ -27,12 +27,10 @@ pub fn join_right_associativity(expr: &Arc<Expression>) -> Option<Arc<Expression
         return None;
     };
 
-    let Expression::LogicalExpression(LogicalExpression::Join(left_join)) =
-        top_join.left.as_ref()
+    let Expression::LogicalExpression(LogicalExpression::Join(left_join)) = top_join.left.as_ref()
     else {
         return None;
     };
-
 
     let new_right_join = Join {
         left: left_join.right.clone(),

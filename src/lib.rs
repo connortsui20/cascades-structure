@@ -40,11 +40,16 @@ pub trait Relation {
 pub trait Rule: Fn(&Arc<Expression>) -> Option<Arc<Expression>> {}
 
 impl Expression {
-    /// This will make `transform` generic over every possible `Rule` type.
+    /// This makes `transform` generic over all types that implement the `Rule` function signature.
+    ///
+    /// This can be useful for when a developer wants to dynamically introduce their own rules.
+    ///
+    /// TODO would this actually work?
     pub fn transform_generic<R: Rule>(self: &Arc<Expression>, rule: R) -> Option<Arc<Expression>> {
         rule(self)
     }
 
+    /// Transforms the given input according to a rule, if possible.
     pub fn transform(
         self: &Arc<Expression>,
         rule: fn(&Arc<Expression>) -> Option<Arc<Expression>>,
