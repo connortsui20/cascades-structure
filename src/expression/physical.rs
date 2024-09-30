@@ -7,6 +7,7 @@ use std::sync::Arc;
 pub enum PhysicalExpression {
     TableScan,
     IndexScan,
+    HashJoin
 }
 
 #[derive(Debug)]

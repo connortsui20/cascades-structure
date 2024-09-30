@@ -1,3 +1,5 @@
+#![allow(dead_code)] // TODO remove this
+
 use crate::Expression;
 use std::sync::Arc;
 
