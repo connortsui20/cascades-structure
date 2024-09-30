@@ -1,9 +1,10 @@
 use enum_dispatch::enum_dispatch;
+use rules::Rule;
 use std::sync::Arc;
 
 mod logical;
 mod physical;
-mod transformation_rules;
+mod rules;
 
 use logical::*;
 use physical::*;
@@ -27,39 +28,17 @@ pub trait Relation {
     fn children(&self) -> Vec<Arc<Expression>>;
 }
 
-/// A representation of a Cascades rule.
-///
-/// A Cascades rule is defined as anything that is equivalent to a function that takes in an
-/// [`Arc<Expression>`], pattern matches against it (either returning `true` or `false`), and if it
-/// successfully matches, applies a transformation.
-///
-/// By combining the Cascades' `CheckPattern` and `Transform` functions, we do not have to traverse
-/// the tree of relations more than once to transform the `Expression`.
-///
-/// TODO is it okay to make that optimization?
-pub trait Rule: Fn(&Arc<Expression>) -> Option<Arc<Expression>> {}
-
 impl Expression {
-    /// This makes `transform` generic over all types that implement the `Rule` function signature.
-    ///
-    /// This can be useful for when a developer wants to dynamically introduce their own rules.
-    ///
-    /// TODO would this actually work?
-    pub fn transform_generic<R: Rule>(self: &Arc<Expression>, rule: R) -> Option<Arc<Expression>> {
-        rule(self)
-    }
-
     /// Transforms the given input according to a rule, if possible.
-    pub fn transform(
-        self: &Arc<Expression>,
-        rule: fn(&Arc<Expression>) -> Option<Arc<Expression>>,
-    ) -> Option<Arc<Expression>> {
+    pub fn transform<R: Rule>(self: &Arc<Expression>, rule: R) -> Option<Arc<Expression>> {
         rule(self)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use rules::{transformation_rules, StaticRule};
+
     use super::*;
 
     #[test]
@@ -86,12 +65,16 @@ mod tests {
             },
         )));
 
+        // Have to use the `as StaticRule` to coerce correctly.
+        // See: https://github.com/rust-lang/rust/issues/62385
+        let rule = transformation_rules::join_commutativity as StaticRule;
+
         let commute_join = join
-            .transform(transformation_rules::join_commutativity)
+            .transform(rule)
             .expect("This join rule should pattern match correctly");
 
         let revert = commute_join
-            .transform(transformation_rules::join_commutativity)
+            .transform(rule)
             .expect("This join rule should pattern match correctly");
 
         println!("Original:\n{:?}\n", join);

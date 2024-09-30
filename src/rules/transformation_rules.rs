@@ -1,4 +1,5 @@
-use super::*;
+use crate::{Expression, Join, LogicalExpression};
+use std::sync::Arc;
 
 /// A rule that defines join commutativity.
 ///
