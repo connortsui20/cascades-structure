@@ -37,7 +37,7 @@ impl Expression {
 
 #[cfg(test)]
 mod tests {
-    use rules::{transformation_rules, StaticRule};
+    use rules::{transformation, StaticRule};
 
     use super::*;
 
@@ -67,7 +67,7 @@ mod tests {
 
         // Have to use the `as StaticRule` to coerce correctly.
         // See: https://github.com/rust-lang/rust/issues/62385
-        let rule = transformation_rules::join_commutativity as StaticRule;
+        let rule = transformation::join_commutativity as StaticRule;
 
         let commute_join = join
             .transform(rule)

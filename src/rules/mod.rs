@@ -1,8 +1,8 @@
 use crate::Expression;
 use std::sync::Arc;
 
-pub mod transformation_rules;
-pub mod implementation_rules;
+pub mod transformation;
+pub mod implementation;
 
 /// A representation of a Cascades rule.
 ///
