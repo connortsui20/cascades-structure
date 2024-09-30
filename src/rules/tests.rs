@@ -5,27 +5,21 @@ use super::*;
 
 #[test]
 fn basic() {
-    let table1 = Arc::new(Expression::LogicalExpression(LogicalExpression::Scan(
-        Scan {
-            table_id: 1,
-            filters: (),
-        },
-    )));
+    let table1 = Arc::new(Expression::Logical(LogicalExpression::Scan(Scan {
+        table_id: 1,
+        filters: (),
+    })));
 
-    let table2 = Arc::new(Expression::LogicalExpression(LogicalExpression::Scan(
-        Scan {
-            table_id: 2,
-            filters: (),
-        },
-    )));
+    let table2 = Arc::new(Expression::Logical(LogicalExpression::Scan(Scan {
+        table_id: 2,
+        filters: (),
+    })));
 
-    let join = Arc::new(Expression::LogicalExpression(LogicalExpression::Join(
-        Join {
-            left: table1,
-            right: table2,
-            join_type: (),
-        },
-    )));
+    let join = Arc::new(Expression::Logical(LogicalExpression::Join(Join {
+        left: table1,
+        right: table2,
+        join_type: (),
+    })));
 
     // Have to use the `as StaticRule` to coerce correctly.
     // See: https://github.com/rust-lang/rust/issues/62385

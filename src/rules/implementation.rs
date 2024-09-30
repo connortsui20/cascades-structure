@@ -12,11 +12,11 @@ static STATIC_IMPLEMENTATION_RULES: [StaticRule; 2] = [table_scan, hash_join];
 
 /// An implementation rule that turns a logical scan into a table scan.
 pub fn table_scan(expr: &Arc<Expression>) -> Option<Arc<Expression>> {
-    let Expression::LogicalExpression(LogicalExpression::Scan(scan)) = expr.as_ref() else {
+    let Expression::Logical(LogicalExpression::Scan(scan)) = expr.as_ref() else {
         return None;
     };
 
-    Some(Arc::new(Expression::PhysicalExpression(
+    Some(Arc::new(Expression::Physical(
         PhysicalExpression::TableScan(TableScan {
             table_id: scan.table_id,
             filters: scan.filters,
@@ -26,11 +26,11 @@ pub fn table_scan(expr: &Arc<Expression>) -> Option<Arc<Expression>> {
 
 /// An implementation rule that turns a logical join into a hash join.
 pub fn hash_join(expr: &Arc<Expression>) -> Option<Arc<Expression>> {
-    let Expression::LogicalExpression(LogicalExpression::Join(join)) = expr.as_ref() else {
+    let Expression::Logical(LogicalExpression::Join(join)) = expr.as_ref() else {
         return None;
     };
 
-    Some(Arc::new(Expression::PhysicalExpression(
+    Some(Arc::new(Expression::Physical(
         PhysicalExpression::HashJoin(HashJoin {
             join_type: (),
             hash_table_size: 42,

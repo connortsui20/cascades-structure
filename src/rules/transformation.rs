@@ -15,7 +15,7 @@ static STATIC_TRANSFORMATION_RULES: [StaticRule; 2] =
 ///
 /// `Join(A, B)` is logically equivalent to `Join(B, A)`.
 pub fn join_commutativity(expr: &Arc<Expression>) -> Option<Arc<Expression>> {
-    let Expression::LogicalExpression(LogicalExpression::Join(join)) = expr.as_ref() else {
+    let Expression::Logical(LogicalExpression::Join(join)) = expr.as_ref() else {
         return None;
     };
 
@@ -25,21 +25,20 @@ pub fn join_commutativity(expr: &Arc<Expression>) -> Option<Arc<Expression>> {
         join_type: (),
     };
 
-    Some(Arc::new(Expression::LogicalExpression(
-        LogicalExpression::Join(new_join),
-    )))
+    Some(Arc::new(Expression::Logical(LogicalExpression::Join(
+        new_join,
+    ))))
 }
 
 /// A rule that defines join right associativity.
 ///
 /// `Join(Join(A, B), C)` is logically equivalent to `Join(A, Join(B, C))`.
 pub fn join_right_associativity(expr: &Arc<Expression>) -> Option<Arc<Expression>> {
-    let Expression::LogicalExpression(LogicalExpression::Join(top_join)) = expr.as_ref() else {
+    let Expression::Logical(LogicalExpression::Join(top_join)) = expr.as_ref() else {
         return None;
     };
 
-    let Expression::LogicalExpression(LogicalExpression::Join(left_join)) = top_join.left.as_ref()
-    else {
+    let Expression::Logical(LogicalExpression::Join(left_join)) = top_join.left.as_ref() else {
         return None;
     };
 
@@ -51,13 +50,11 @@ pub fn join_right_associativity(expr: &Arc<Expression>) -> Option<Arc<Expression
 
     let new_top_join = Join {
         left: left_join.left.clone(),
-        right: Arc::new(Expression::LogicalExpression(LogicalExpression::Join(
-            new_right_join,
-        ))),
+        right: Arc::new(Expression::Logical(LogicalExpression::Join(new_right_join))),
         join_type: (),
     };
 
-    Some(Arc::new(Expression::LogicalExpression(
-        LogicalExpression::Join(new_top_join),
-    )))
+    Some(Arc::new(Expression::Logical(LogicalExpression::Join(
+        new_top_join,
+    ))))
 }

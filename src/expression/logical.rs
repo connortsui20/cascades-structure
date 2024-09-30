@@ -1,4 +1,4 @@
-use crate::{Expression, Relation};
+use crate::{Expression, PhysicalProperties, Relation};
 use enum_dispatch::enum_dispatch;
 use std::sync::Arc;
 
@@ -20,6 +20,10 @@ impl Relation for Scan {
     fn children(&self) -> Vec<Arc<Expression>> {
         vec![]
     }
+
+    fn physical_properties(&self) -> Vec<PhysicalProperties> {
+        vec![]
+    }
 }
 
 #[derive(Debug)]
@@ -31,6 +35,10 @@ pub struct Filter {
 impl Relation for Filter {
     fn children(&self) -> Vec<Arc<Expression>> {
         vec![self.children.clone()]
+    }
+
+    fn physical_properties(&self) -> Vec<PhysicalProperties> {
+        vec![]
     }
 }
 
@@ -44,5 +52,9 @@ pub struct Join {
 impl Relation for Join {
     fn children(&self) -> Vec<Arc<Expression>> {
         vec![self.left.clone(), self.right.clone()]
+    }
+
+    fn physical_properties(&self) -> Vec<PhysicalProperties> {
+        vec![]
     }
 }

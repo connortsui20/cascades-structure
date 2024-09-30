@@ -1,4 +1,4 @@
-use crate::{Expression, Relation};
+use crate::{Expression, PhysicalProperties, Relation};
 use enum_dispatch::enum_dispatch;
 use std::sync::Arc;
 
@@ -7,7 +7,7 @@ use std::sync::Arc;
 pub enum PhysicalExpression {
     TableScan,
     IndexScan,
-    HashJoin
+    HashJoin,
 }
 
 #[derive(Debug)]
@@ -18,6 +18,10 @@ pub struct TableScan {
 
 impl Relation for TableScan {
     fn children(&self) -> Vec<Arc<Expression>> {
+        vec![]
+    }
+
+    fn physical_properties(&self) -> Vec<PhysicalProperties> {
         vec![]
     }
 }
@@ -34,6 +38,10 @@ impl Relation for IndexScan {
     fn children(&self) -> Vec<Arc<Expression>> {
         vec![]
     }
+
+    fn physical_properties(&self) -> Vec<PhysicalProperties> {
+        vec![PhysicalProperties::Sorted(42)]
+    }
 }
 
 #[derive(Debug)]
@@ -48,5 +56,9 @@ pub struct HashJoin {
 impl Relation for HashJoin {
     fn children(&self) -> Vec<Arc<Expression>> {
         vec![self.left.clone(), self.right.clone()]
+    }
+
+    fn physical_properties(&self) -> Vec<PhysicalProperties> {
+        vec![]
     }
 }

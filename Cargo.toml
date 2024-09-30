@@ -1,7 +1,8 @@
 [package]
-name = "cascades"
+name = "cascades-structure"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+arc-swap = "1.7"
 enum_dispatch = "0.3"
