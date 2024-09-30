@@ -4,6 +4,9 @@ use std::sync::Arc;
 pub mod transformation;
 pub mod implementation;
 
+#[cfg(test)]
+mod tests;
+
 /// A representation of a Cascades rule.
 ///
 /// A Cascades rule is defined as anything that is equivalent to a function that takes in an
