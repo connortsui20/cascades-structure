@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 arc-swap = "1.7"
+dashmap = "6.1.0"
 enum_dispatch = "0.3"

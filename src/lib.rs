@@ -1,4 +1,5 @@
 use arc_swap::ArcSwapOption;
+use dashmap::DashMap;
 use enum_dispatch::enum_dispatch;
 use rules::Rule;
 use std::sync::atomic::AtomicU8;
@@ -21,27 +22,6 @@ use expression::physical::*;
 pub enum Expression {
     Logical(LogicalExpression),
     Physical(PhysicalExpression),
-}
-
-/// The different types of physical properties.
-pub enum PhysicalProperties {
-    Sorted(usize),
-    Partitioned(usize),
-    Exchanged(usize),
-    RowStored,
-    ColumnStored,
-}
-
-/// A `Guidance` object that tracks the possible transformations that can be applied to an
-/// `Expression` tree.
-///
-/// TODO:
-/// This `Guidance` type will have to support concurrent access and modification so that there is
-/// only one worker applying a transformation at a time.
-pub struct Guidance {
-    // TODO create an atomic bitmap instead.
-    pub bitmap: Arc<[AtomicU8]>,
-    pub cost_limit: AtomicUsize,
 }
 
 impl Expression {
@@ -78,6 +58,27 @@ pub trait Relation {
     fn physical_properties(&self) -> Vec<PhysicalProperties>;
 }
 
+/// The different types of physical properties.
+pub enum PhysicalProperties {
+    Sorted(usize),
+    Partitioned(usize),
+    Exchanged(usize),
+    RowStored,
+    ColumnStored,
+}
+
+/// A `Guidance` object that tracks the possible transformations that can be applied to an
+/// `Expression` tree.
+///
+/// TODO:
+/// This `Guidance` type will have to support concurrent access and modification so that there is
+/// only one worker applying a transformation at a time.
+pub struct Guidance {
+    // TODO create an atomic bitmap instead.
+    pub bitmap: Arc<[AtomicU8]>,
+    pub cost_limit: AtomicUsize,
+}
+
 // The winning / best plan for a given group / equivalence class.
 pub struct Winner {
     expression: Arc<Expression>,
@@ -85,16 +86,13 @@ pub struct Winner {
 }
 
 /// The representation of an equivalence class in the Cascades framework.
+///
+/// TODO:
+/// - Assuming we have a way to quickly look up a group and get access to the list of equivalent
+///   expressions as well as the current winner, should we store guidance and promise inside the
+///   expressions themselves (literally in the [`Expression`] tree) or can we store them right next
+///   to each other in the memo table?
 pub struct Group {
-    /// The equivalent expressions that belong to this group / equivalence class.
-    expressions: Vec<Arc<Expression>>,
-
-    /// By storing this in an atomic `ArcSwapOption`, we can ensure atomic changes to both the
-    /// expression and the cost associated with that expression.
-    winner: ArcSwapOption<Winner>,
-}
-
-pub struct MemoEntry {
     /// The equivalent expressions that belong to this group / equivalence class.
     expressions: Arc<RwLock<Vec<Arc<Expression>>>>,
 
@@ -103,7 +101,26 @@ pub struct MemoEntry {
     winner: ArcSwapOption<Winner>,
 }
 
+/// The lookup key for a `Group`.
+///
+/// TODO:
+/// - How do to store and lookup groups efficiently? By ID or hashing? Or some other type of representation?
+pub struct GroupKey {
+    // is this the right representation?
+    id: usize,
+}
+
 /// The memoization table used for dynamic programming in the Cascades framework.
+///
+/// TODO:
+/// - The memo table _needs_ to allow parallel access and mutation, which means it will need a very
+///   fine level of granular locking. What probably makes the most sense is storing 1 rwlock for
+///   every group / equivalence class, and having guidance be implemented via atomic types is (using
+///   a lot of compare-and-swaps + fetch_update) is likely sufficient.
+///
+/// - Ideally, a task / job should be able to run independently of all other tasks so that tasks
+///   are not waiting on each other for long stretches of execution.
 pub struct Memo {
-    thing: (),
+    /// A concurrent hash table mapping [`GroupKey`]s to [`Group`]s.
+    table: DashMap<GroupKey, Group>,
 }
