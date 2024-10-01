@@ -1,12 +1,23 @@
+//! Some high-level thoughts:
+//!
+//! - Having very strict types may make things verbose, but it ensures that things are not incorrect
+//!   and generally easier to work with.
+//! - There are quite a few design decisions that should be made with respect to the specific data
+//!   structures used (Memo table keys and values, granularity of locks, where to store guidance,
+//!   where to store the different types of rules)
+//! - I think it is possible for us to implement efficient parallel search _without_ a task
+//!   dependency graph like the one described in Orca, **only if** we use an asynchronous runtime.
+//!   The concern with not having a dependency graph is that tasks that get scheduled might get
+//!   blocked on other tasks and spend most of their time waiting for the tasks they are dependent
+//!   to finish. However, in an asynchronous environment, there is not blocking, and the runtime can
+//!   figure out which task the current task is dependent on and go help it out.
+
 use arc_swap::ArcSwapOption;
 use dashmap::DashMap;
 use enum_dispatch::enum_dispatch;
 use rules::Rule;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::AtomicU8;
-use std::sync::atomic::AtomicUsize;
-use std::sync::Arc;
-use std::sync::RwLock;
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize};
+use std::sync::{Arc, RwLock};
 
 mod engine;
 mod expression;
@@ -57,7 +68,7 @@ impl Expression {
     /// Should we store the `Guidance` inside the `Expression` tree or in the memo table?
     pub fn transformation_moves(
         self: &Arc<Expression>,
-        _guidance: &Guidance,
+        guidance: &Guidance,
     ) -> Vec<(Arc<dyn Rule>, usize)> {
         todo!("Return an iterator over the possible transformations")
     }
