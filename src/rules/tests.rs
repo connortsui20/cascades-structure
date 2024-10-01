@@ -24,13 +24,9 @@ fn basic_transformation() {
     // Have to use the `as StaticRule` to coerce correctly.
     let rule = transformation::join_commutativity as StaticRule;
 
-    let commute_join = join
-        .transform(rule)
-        .expect("This join rule should pattern match correctly");
+    let commute_join = rule(&join).expect("This join rule should pattern match correctly");
 
-    let revert = commute_join
-        .transform(rule)
-        .expect("This join rule should pattern match correctly");
+    let revert = rule(&commute_join).expect("This join rule should pattern match correctly");
 
     println!("Original:\n{:?}\n", join);
     println!("Commutativity Applied:\n{:?}\n", commute_join);

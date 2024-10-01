@@ -18,7 +18,11 @@ mod tests;
 /// By combining the Cascades' `CheckPattern` and `Transform` functions, we do not have to traverse
 /// the tree of relations more than once to transform the `Expression`.
 ///
-/// TODO is it okay to make that optimization?
+/// TODO: is it okay to make that optimization?
+///
+/// TODO: Should this return a `Vec` of `Expression`s instead?
+///
+/// TODO: May need a way to distinguish if a rule is a transformation rule or not.
 pub trait Rule: Fn(&Arc<Expression>) -> Option<Arc<Expression>> {}
 
 pub type StaticRule = fn(&Arc<Expression>) -> Option<Arc<Expression>>;

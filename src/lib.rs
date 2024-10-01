@@ -19,10 +19,29 @@ use expression::physical::*;
 ///
 /// We use the [`enum_dispatch`] macro to generate enum bindings for all possible variants. See the
 /// documentation in the modules [`logical`] and [`physical`] for more information.
+///
+/// Note that the only reason why this is not using [`enum_dispatch`] is that it would make
+/// constructing one of these way too verbose.
 #[derive(Debug)]
 pub enum Expression {
     Logical(LogicalExpression),
     Physical(PhysicalExpression),
+}
+
+impl Relation for Expression {
+    fn children(&self) -> Vec<Arc<Expression>> {
+        match self {
+            Expression::Logical(logical_expression) => logical_expression.children(),
+            Expression::Physical(physical_expression) => physical_expression.children(),
+        }
+    }
+
+    fn physical_properties(&self) -> Vec<PhysicalProperties> {
+        match self {
+            Expression::Logical(logical_expression) => logical_expression.physical_properties(),
+            Expression::Physical(physical_expression) => physical_expression.physical_properties(),
+        }
+    }
 }
 
 impl Expression {
@@ -31,25 +50,29 @@ impl Expression {
         rule(self).is_some()
     }
 
-    /// Transforms the given input according to a rule, if possible.
-    pub fn transform<R: Rule>(self: &Arc<Expression>, rule: R) -> Option<Arc<Expression>> {
-        rule(self)
-    }
-
-    /// Given an expression, returns an iterator of the possible transformations this expression can
-    /// take on, ordered by their promise values.
+    /// Given an expression, returns an iterator of the possible logical transformations this
+    /// expression can take on, ordered by their promise values.
     ///
     /// TODO:
     /// Should we store the `Guidance` inside the `Expression` tree or in the memo table?
-    pub fn moves<I>(self: &Arc<Expression>, _guidance: &Guidance) -> I
-    where
-        I: Iterator<Item = Arc<Expression>>,
-    {
+    pub fn transformation_moves(
+        self: &Arc<Expression>,
+        _guidance: &Guidance,
+    ) -> Vec<(Arc<dyn Rule>, usize)> {
+        todo!("Return an iterator over the possible transformations")
+    }
+
+    /// Given an expression, returns an iterator of the possible physical and logical
+    /// transformations this expression can take on, ordered by their promise values.
+    ///
+    /// TODO:
+    /// Should we store the `Guidance` inside the `Expression` tree or in the memo table?
+    pub fn all_moves(self: &Arc<Expression>, _guidance: &Guidance) -> Vec<(Arc<dyn Rule>, usize)> {
         todo!("Return an iterator over the possible transformations")
     }
 
     /// Returns the group / equivalence class of the current expression.
-    pub fn group(self: Arc<Expression>, memo: Arc<Memo>) -> Arc<Group> {
+    pub fn group(self: &Arc<Expression>, memo: &Arc<Memo>) -> Arc<Group> {
         todo!("Figure out the `GroupKey` of the current `Expression` and find the group in memo")
     }
 }
@@ -79,6 +102,7 @@ pub enum PhysicalProperties {
 /// TODO:
 /// This `Guidance` type will have to support concurrent access and modification so that there is
 /// only one worker applying a transformation at a time.
+#[derive(Default)]
 pub struct Guidance {
     // TODO create an atomic bitmap instead.
     pub bitmap: Arc<[AtomicU8]>,

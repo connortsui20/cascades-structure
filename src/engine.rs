@@ -1,6 +1,7 @@
-use crate::{rules::Rule, Expression, Group, Memo};
+use crate::Relation;
+use crate::{rules::Rule, Expression, Group, Guidance, Memo};
 use scc::Stack;
-use std::sync::{atomic::Ordering, Arc, RwLock};
+use std::sync::{atomic::Ordering, Arc};
 
 /// The different types of tasks in the Cascades framework.
 pub enum Task {
@@ -37,7 +38,7 @@ pub enum Task {
 /// TODO:
 /// Note that all of the fields need to be serializable if we want to implement leaving breadcrumbs.
 pub struct SearchEngine {
-    memo: Arc<RwLock<Memo>>,
+    memo: Arc<Memo>,
     tasks: Stack<Task>,
 }
 
@@ -91,12 +92,46 @@ impl SearchEngine {
     /// Generates alternative equivalent logical expressions for the expression, pushing `ApplyRule`
     /// tasks onto the stack.
     pub fn explore_expression(&self, expr: &Arc<Expression>, limit: usize) {
-        todo!()
+        let group = expr.group(&self.memo);
+
+        // TODO: Get the guidance object from the memo table using the group somehow.
+        let guidance = Guidance::default();
+
+        let moves = expr.transformation_moves(&guidance);
+
+        // Place all of the possible moves ordered by their promise onto the stack.
+        for (rule, promise) in moves {
+            self.tasks.push(Task::ApplyRule {
+                expr: expr.clone(),
+                limit,
+                rule,
+                promise,
+            });
+        }
+
+        todo!("Explore the groups of the children???")
     }
 
     /// Derives the best physical plan for an expression and places it in the memo table.
     pub fn optimize_expression(&self, expr: &Arc<Expression>, limit: usize) {
-        todo!()
+        let group = expr.group(&self.memo);
+
+        // TODO: Get the guidance object from the memo table using the group somehow.
+        let guidance = Guidance::default();
+
+        let moves = expr.all_moves(&guidance);
+
+        // Place all of the possible moves ordered by their promise onto the stack.
+        for (rule, promise) in moves {
+            self.tasks.push(Task::ApplyRule {
+                expr: expr.clone(),
+                limit,
+                rule,
+                promise,
+            });
+        }
+
+        todo!("Explore the groups of the children???")
     }
 
     /// Applies a rule to the given expression, updates the memo table, and adds new expressions to
@@ -108,11 +143,22 @@ impl SearchEngine {
         rule: &Arc<dyn Rule>,
         promise: usize,
     ) {
-        todo!()
+        // TODO: Rules should be able to generate more than 1 new expression
+        let new_expr = rule(expr);
+
+        todo!(
+            "Update the memo with the new expression(s?), \
+              and then case on whether or not the rule is a transformation rule or not"
+        );
     }
 
     /// Iterates over the inputs / children of an expression and optimizes them.
     pub fn optimize_inputs(&self, expr: &Arc<Expression>, limit: usize) {
-        todo!()
+        for child_expr in expr.children() {
+            todo!(
+                "Update the cost bounds, then the cost limit, \
+                  and then optimize the groups of the children"
+            )
+        }
     }
 }
