@@ -1,47 +1,38 @@
 # `optd` Project Rewrite
 
-This document details the design of the new `optd` optimizer.
+_This document details the design of the new `optd` optimizer._
 
-# Cascades
-
-The `optd` optimizer is based on the cost-based Cascades query optimization framework.
-
-Many of the terms used in this document will be based on terms and concepts defined in the article
-_Extensible query optimizers in practice_, specifically in Chapter 2.
+The `optd` optimizer is based on the cost-based Cascades query optimization framework. Many of the terms used in this document will be based on terms and concepts defined in the article _Extensible query optimizers in practice_, specifically in Chapter 2.
 
 # Overarching Goals
 
 The main goal of the `optd` project is to build a query optimizer that has the following properties,
 listed in no particular order of importance:
 
--   **Standalone**: The `optd` optimizer is a standalone component. This is in contrast to other query optimizers that are built directly into end-to-end database management systems. The goal of building a standalone optimizer is to allow DBMS developers to "plug-and-play" `optd` into their own systems.
--   **Extensible**: Developers that use the `optd` optimizer should be able to customize the behavior of `optd` by adding their own relational operators and rules (among other things). The internal optimization engine and search algorithm of `optd` should be agnostic to the exact behavior of the expressions it is optimizing.
--   **Parallel**: In order to extract the most performance out of modern concurrent hardware (CPUs and storage devices), the search algorithm of `optd` should support parallel query plan search. A secondary goal is to limit both global contention and any other forms of OS-provided blocking as much as possible.
+-   **Standalone**: The `optd` optimizer should be a standalone component. This is in contrast to other query optimizers that are built directly into end-to-end database management systems. The goal of building a standalone optimizer is to allow future DBMS developers to "plug-and-play" `optd` into their own systems.
+-   **Extensible**: Developers that use the `optd` optimizer should be able to customize the behavior of `optd` by adding their own relational operators and rules (among other things). The internal optimization engine and search algorithm of `optd` should be agnostic to the behavior of the expressions it is optimizing.
+-   **Parallel**: In order to extract the most performance out of modern concurrent hardware (CPUs and storage devices), the query optimization algorithm of `optd` should support parallel search. A secondary goal is to limit both the global contention on data structures as well as any forms of OS-provided blocking as much as possible.
 -   **Persistent**: Queries often repeat, and different query plans often have similar structure. By persisting state between optimizations of query plans, we can leave "breadcrumbs" of any decisions made for future queries to utilize, which should prevent duplicate work over time. An added benefit of this is that query optimization can be stopped and restarted at any time, and can be durable against crashes.
 
 ## Standalone
 
-TODO Substrait
-TODO Datafusion?
-TODO Cost Model?
+The `optd` optimizer should be its own modularized component that DBMS developers can easily add to their own system. Due to its standalone nature, `optd` should use a standard representation of query plans as the bridge between `optd` and the external execution engine.
+
+`optd` will use **Substrait** as its query plan representation by default. This can potentially be extended to support other representations in the future, but we will use Substrait by default.
+
+TODO more information on plans for integration with Substrait
+
+Additionally, `optd` will use **DataFusion** as its default execution engine as well as use DataFusion's SQL parser and binder.
+
+TODO more information on plans for integration with DataFusion
 
 ## Extensible
 
-3 types of expressions in the expression tree:
-Logical Expression / Relational Node
-Physical Expression / Physical Operator
-Predicate / Scalar / SQL Expression
+Due to `optd`'s standalone nature, it must support the customization and extensibility of its rules and operators without requiring an external developer to fork the entire repository. A developer using `optd` should be able to easily add their own relations, nodes, and SQL expressions.
 
-Note that each of these expressions can have children of any expression type.
+The search algorithm of optimization itself should not need to know the exact behavior of operators and relations it is optimizing. It should also be completely agnostic to transformation and implementation rules, regardless of if they are provided by us (first-party) or provided by a third-party developer. This means that the `optd` search engine must rely on dynamic dispatch and trait objects for the manipulation of external types.
 
-A developer using `optd` should be able to easily add their own relations, nodes, and predicates. Internally, we can use Rust enums (via the `enum_dispatch` crate) to ensure a correct type system, and then add a `Box<dyn Trait>` variant that allows external developers to add their own types.Am
-We have 2 types of groups / equivalence classes:
-Cascades / Relational / Operator Group
-Predicate Group
-
-A Cascades Group is a set of all logically and physically equivalent expressions.
-
-A Predicate Group is a set of all equivalent predicate / SQL expressions. It might seem like a waste to store multiple equivalent Predicate expressions, since we generally use heuristic constant folding in these types of expressions. We will explain later why we want to record these, but at a high level the expression (A && B) might be cheap at some point in time, but it can become expensive and (B && A) might be the better option.
+However, this does not mean we must give up on Rust's powerful type system (abstract data types via `enum`s). Internally, we can use Rust `enum`s (via the `enum_dispatch` crate) to ensure correctness over the first-party core operators and rules that we write ourselves. Then, we can add a `Box<dyn Trait>` variant that allows external developers to additionally add their own types. This would allow compile-time guarantees for the all of the first-party rules and operators in the standalone crate, while also allowing the flexibility and dynamicism of trait objects.
 
 ## Parallel
 
@@ -67,6 +58,25 @@ The original Cascades paper
 Microsoft "Extensible query optimizers in practice" article
 The Orca query optimizer
 CockroachDB's query optimizer
+
+# Design
+
+3 types of expressions in the expression tree:
+Logical Expression / Relational Node
+Physical Expression / Physical Operator
+Predicate / Scalar / SQL Expression
+
+Note that each of these expressions can have children of any expression type.
+
+We have 2 types of groups / equivalence classes:
+Cascades / Relational / Operator Group
+Predicate Group
+
+A Cascades Group is a set of all logically and physically equivalent expressions.
+
+A Predicate Group is a set of all equivalent predicate / SQL expressions. It might seem like a waste to store multiple equivalent Predicate expressions, since we generally use heuristic constant folding in these types of expressions. We will explain later why we want to record these, but at a high level the expression (A && B) might be cheap at some point in time, but it can become expensive and (B && A) might be the better option.
+
+---
 
 ### Former Readme
 
