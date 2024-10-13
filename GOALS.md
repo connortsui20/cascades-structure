@@ -34,15 +34,19 @@ The search algorithm of optimization itself should not need to know the exact be
 
 However, this does not mean we must give up on Rust's powerful type system (abstract data types via `enum`s). Internally, we can use Rust `enum`s (via the `enum_dispatch` crate) to ensure correctness over the first-party core operators and rules that we write ourselves. Then, we can add a `Box<dyn Trait>` variant that allows external developers to additionally add their own types. This would allow compile-time guarantees for the all of the first-party rules and operators in the standalone crate, while also allowing for the flexibility of trait objects. Note that this might seem like redundant work, but it will allow for faster velocity of change for the core components of `optd` while ensuring correctness throughout development.
 
+TODO Cost model extensibility?
+
 ## Parallel
 
 One of the main challenges in creating a parallel search algorithm is managing dependent state between tasks and preventing duplicate / unnecessary work across tasks.
 
-It will often be the case that one worker will be optimizing an expression that requires the optimization of a subexpression / child, and some other worker is in the process of optimizing said su expression. The worst way to handle this is to simply put the entire thread that the worker is running on to sleep, as this reduces the parallelism and efficiency of the system.
+It will often be the case that one worker will be optimizing an expression that requires the optimization of a sub-expression / child, and some other worker is in the process of optimizing said sub-expression. The worst way to handle this is to simply put the entire thread that the worker is running on to sleep, as this reduces the parallelism and efficiency of the system.
 
-TODO Merging of groups
+Another challenge is the fact that the memo table (used for dynamic programming in the Cascades query optimization framework) is a single point of global contention. Almost every operation and task in the Cascades framework must read _and_ write to the memo table in a thread-safe manner. This means that surrounding the memo table with a single global lock would eliminate almost all parallelism, and performance would be measured by the speed at which threads can acquire and release a lock.
 
-TODO Promise and Guidance???
+A potential solution to both of these problems is to use an asynchronous and cooperative model of parallel execution. In an asynchronous runtime, all parallelism is handled in userspace, and tasks that "block" waiting for other tasks (e.g., on a mutex or on I/O) don't actually halt the threads they are running on. Instead, they yield to another task that is located on the same thread. In other words, using an asynchronous runtime like `tokio` could eliminate the need for a complicated task dependency graph in the task scheduler (such as the one used by Orca) as a task that is "waiting" is no longer the same as a task that is "blocked" or sleeping.
+
+Contention is still a problem in an asynchronous setting, as there is only so much a runtime can do to alleviate all tasks attempting to access global data structures in a thread-safe manner with locks. Thus, the memo table itself needs to support parallel access and manipulation. The first steps we should take are implementing finer granularity of locking in the memo table. In the future, it is likely possible to implement the entire memo table in a lock-free manner (copy-on-write, append-only, compare-and-swap semantics, etc.). Using an asynchronous runtime certainly helps, as "locking" is not the same as when using traditional synchronous threads.
 
 ## Persistent
 
