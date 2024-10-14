@@ -77,7 +77,7 @@ One of the main research contributions of `optd` will be leaving a record of all
 
 We will use an ORM (Object Relational Mapper) to model our optimization framework. At the time of writing, there are two actively developed ORMs for Rust: [`diesel`] and [SeaORM]. Even though [`diesel`] is more performant, [SeaORM] has more active development and also supports `async` Rust by default, so we will be using [SeaORM] as our data modeler. [SeaORM] uses the [`sqlx`] library under the hood, which currently only supports `MySQL`, `Postgres`, and `SQLite`, with experimental support for `MSSQL`.
 
-### Database Design
+### Database Design (WIP)
 
 This section will detail some important pieces of data that we want to record.
 
@@ -96,16 +96,20 @@ TODO all of these are based on the whiteboard database diagrams we created, and 
 -   Predicate / SQL Expression Groups
 -   Predicate Costs
 
-# Related Work
+# Related Work (WIP)
 
-TODO links to all of these
+TODO links and descriptions for all of these
 
--   The original Cascades paper
+-   The original [Cascades] paper
 -   Microsoft "Extensible query optimizers in practice" article
--   The Orca query optimizer
+-   The [Orca] query optimizer
 -   CockroachDB's query optimizer
 
-# Design
+# Design (WIP)
+
+TODO flesh this section out more
+
+TODO all naming subject to change
 
 3 types of expressions in the expression tree:
 Logical Expression / Relational Node
@@ -122,6 +126,16 @@ A Cascades Group is a set of all logically and physically equivalent expressions
 
 A Predicate Group is a set of all equivalent predicate / SQL expressions. It might seem like a waste to store multiple equivalent Predicate expressions, since we generally use heuristic constant folding in these types of expressions. We will explain later why we want to record these, but at a high level the expression (A && B) might be cheap at some point in time, but it can become expensive and (B && A) might be the better option.
 
+TODO
+
+Representation of groups and expressions in the memo table
+
+Fingerprinting of expressions
+
+Group IDs
+
+Merging of groups via the concept of a "parent group" using a typical union find data structure for group IDs
+
 ---
 
 # Links
@@ -133,3 +147,5 @@ A Predicate Group is a set of all equivalent predicate / SQL expressions. It mig
 [`diesel`]: https://diesel.rs/
 [SeaORM]: https://www.sea-ql.org/SeaORM/
 [`sqlx`]: https://docs.rs/sqlx/latest/sqlx/
+[Cascades]: https://15721.courses.cs.cmu.edu/spring2019/papers/22-optimizer1/xu-columbia-thesis1998.pdf
+[Orca]: https://15721.courses.cs.cmu.edu/spring2024/papers/13-optimizer1/p337-soliman.pdf
