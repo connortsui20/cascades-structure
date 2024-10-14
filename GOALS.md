@@ -8,6 +8,8 @@ The purpose of this document is to record the high-level goals and potential con
 
 Note that at the time of writing, `optd` already has a prototype implementation. However, this document purposefully does not reference the code of the prototype. We will make the assumption that nothing has been implemented, and this project will be started from scratch.
 
+Not all of the goals we describe in this document may be possible. However, by recording all of our goals in one place, we hope to create a unified vision for the `optd` project that will allow us to pave a clearer path.
+
 # Overarching Goals
 
 The main goal of the `optd` project is to build a query optimizer that has the following properties, listed in no particular order of importance:
@@ -49,7 +51,11 @@ However, this does not mean we must solely switch to an object-oriented model an
 
 TODO Cost model extensibility?
 
-TODO documentation
+Echoing the end of the [standalone](#standalone) section, since we expect developers to add their own custom operators and rules, high quality documentation, tutorials, and examples of how to use `optd` is an absolute requirement.
+
+### Internal Extensibility
+
+Ideally, all of the high-level goals that have been stated in the section should be true not just for the public layer, but also the private library implementation itself. The internal library should be modular, extensible, have excellent documentation, and have a robust testing framework. We expect many people will be working on the `optd` project over the years to come, not all at the same time. We want to reduce the activation energy needed to get started on a pull request from someone new to the codebase, and since this project is open-source, potentially even someone outside of the CMU DB group.
 
 ## Parallel
 
