@@ -25,17 +25,17 @@ We will explain in depth what each of these goals entail.
 
 The `optd` optimizer should be its own modularized component that DBMS developers can easily "plug in" to their own system. Due to its standalone nature, `optd` should use a standard representation of query plans as the bridge between `optd` and the external execution engine.
 
-`optd` will use **Substrait** as its query plan representation by default. This can potentially be extended to support other representations in the future, but we will use Substrait by default.
+`optd` will use **[Substrait]** as its query plan representation by default. This can potentially be extended to support other representations in the future, but we will use [Substrait] by default.
 
-TODO justification on why we want to use Substrait
+TODO justification on why we want to use [Substrait]
 
-TODO more information on plans for integration with Substrait
+TODO more information on plans for integration with [Substrait]
 
-Additionally, `optd` will use **DataFusion** as its default execution engine as well as use DataFusion's SQL parser and binder.
+Additionally, `optd` will use **[DataFusion]** as its default execution engine as well as use [DataFusion]'s SQL parser and binder.
 
-TODO more information on plans for integration with DataFusion
+TODO more information on plans for integration with [DataFusion]
 
-TODO plans for eventually removing the DataFusion dependency in the future
+TODO plans for eventually removing the [DataFusion] dependency in the future
 
 Finally, `optd` should ship as either a fully functioning standalone service that exists in its own separate process (or even its own compute node), or a fully embeddable library that lives in the same process as the execution engine. Additionally, we will want to invest in the ease of integration for third-party developers. Getting started with `optd` should be as simple as importing a single library and copy-and-pasting tutorial code from a documentation site.
 
@@ -47,7 +47,7 @@ Since most execution engines are going to share similar behavior and operators (
 
 The core search algorithm of query optimization itself should not need to know the exact behavior of the operators, relations, or rules it is using for optimization, regardless of if they are provided by `optd` (proprietary) or provided by a third-party developer. This means that the `optd` search engine must rely on dynamic dispatch for the manipulation of external third-party types.
 
-However, this does not mean we must solely switch to an object-oriented model and give up on Rust's powerful type system (abstract data types via `enum`s). Internally, we can use Rust `enum`s (via the `enum_dispatch` crate) to ensure correctness over the proprietary operators and rules that we write ourselves. Then, we can add a `Box<dyn Trait>` variant that allows external developers to additionally add their own types. This would allow compile-time guarantees for the all of the proprietary rules and operators in the standalone crate, while also allowing for the flexibility of trait objects. Note that this might seem like redundant work, but it will allow for faster velocity of change for the core components of `optd` while ensuring correctness throughout development.
+However, this does not mean we must solely switch to an object-oriented model and give up on Rust's powerful type system (abstract data types via `enum`s). Internally, we can use Rust `enum`s (via the [`enum_dispatch`] crate) to ensure correctness over the proprietary operators and rules that we write ourselves. Then, we can add a `Box<dyn Trait>` variant that allows external developers to additionally add their own types. This would allow compile-time guarantees for the all of the proprietary rules and operators in the standalone crate, while also allowing for the flexibility of trait objects. Note that this might seem like redundant work, but it will allow for faster velocity of change for the core components of `optd` while ensuring correctness throughout development.
 
 TODO Cost model extensibility?
 
@@ -65,32 +65,45 @@ It will often be the case that one worker will be optimizing an expression that 
 
 Another challenge is the fact that the memo table (used for dynamic programming in the Cascades query optimization framework) is a single point of global contention. Almost every operation and task in the Cascades framework must read _and_ write to the memo table in a thread-safe manner. This means that surrounding the memo table with a single global lock would eliminate almost all parallelism, and performance would be measured by the speed at which threads can acquire and release a lock.
 
-A potential solution to both of these problems is to use an asynchronous and cooperative model of parallel execution. In an asynchronous runtime, all parallelism is handled in userspace, and tasks that "block" waiting for other tasks (e.g., on a mutex or on I/O) don't actually halt the threads they are running on. Instead, they yield to another task that is located on the same thread. In other words, using an asynchronous runtime like `tokio` could eliminate the need for a complicated task dependency graph in the task scheduler (such as the one used by Orca) as an asynchronous task that is "waiting" is not the same as a thread that is "blocked" or sleeping.
+A potential solution to both of these problems is to use an asynchronous and cooperative model of parallel execution. In an asynchronous runtime, all parallelism is handled in userspace, and tasks that "block" waiting for other tasks (e.g., on a mutex or on I/O) don't actually halt the threads they are running on. Instead, they yield to another task that is located on the same thread. In other words, using an asynchronous runtime like [`tokio`] could eliminate the need for a complicated task dependency graph in the task scheduler (such as the one used by Orca) as an asynchronous task that is "waiting" is not the same as a thread that is "blocked" or sleeping.
 
 Contention is still a problem in an asynchronous setting, as there is only so much a runtime can do to alleviate all tasks attempting to access global locks on data structures. Thus, the memo table itself needs to support parallel access and manipulation. At a minimum, the memo table should support finer granularity of locking in the memo table. In the future, it is likely possible to implement the entire memo table in a lock-free manner (copy-on-write, append-only, compare-and-swap semantics, etc.). Using an asynchronous runtime certainly helps, as the cost of "blocking" is not the same as when using traditional synchronous threads.
 
 ## Persistent
 
-One of the main research contributions of `optd` will be leaving a record of all decisions made by the optimizer by persisting optimization state which would act as a trail of breadcrumbs.
+As far as we are aware, current query optimizers are completely volatile. In other words, once a query plan has been optimized, the system forgets all of the steps it took to reach the final fully-optimized query plan.
 
-As far as we are aware, all current query optimizers are completely volatile. In other words, once a query plan has been optimized, the system forgets all of the steps it took to reach the final fully-optimized query plan.
+One of the main research contributions of `optd` will be leaving a record of all decisions made by the optimizer by persisting optimization state, acting as a trail of breadcrumbs. This persisted state should theoretically prevent the query optimizer from doing duplicate work between queries over time. An added benefit of this is that query optimization can be stopped and restarted at any time, and can be durable against crashes. This durable behavior can be the default, allowing for `optd` to behave as an embeddable library if needed. We can simply remove all stored data after every query and use an in-memory DBMS as a backend server.
 
-This persisted state theoretically should prevent duplicate optimization work between queries over time. An added benefit of this is that query optimization can be stopped and restarted at any time, and can be durable against crashes. This behavior can be the default, allowing for `optd` to behave as an embeddable library if needed.
+We will use an ORM (Object Relational Mapper) to model our optimization framework. At the time of writing, there are two actively developed ORMs for Rust: [`diesel`] and [SeaORM]. Even though [`diesel`] is more performant, [SeaORM] has more active development and also supports `async` Rust by default, so we will be using [SeaORM] as our data modeler. [SeaORM] uses the [`sqlx`] library under the hood, which currently only supports `MySQL`, `Postgres`, and `SQLite`, with experimental support for `MSSQL`.
 
-TODO Use of DBMS backend
-TODO SeaORM
-TODO breadcrumbs
-TODO event logs
-TODO durability guarantees?
+### Database Design
 
-While `optd` should have the goal of remembering all decisions made by default, we should also be able to support `optd` as an embeddable library that does not persist any state. We can simply remove all stored data after every query and use an in-memory DBMS as a backend server.
+This section will detail some important pieces of data that we want to record.
+
+TODO all of these are based on the whiteboard database diagrams we created, and all of them need descriptions
+
+-   Databases / Tables / Schemas
+-   Event Logs / History
+-   Epochs
+-   Attributes
+-   Statistics
+-   Triggers
+-   Query Batches / Queries
+-   Plan Groups (Cascades Groups)
+-   Plan Expressions (Logical and Physical Cascades Expressions)
+-   Plan Costs
+-   Predicate / SQL Expression Groups
+-   Predicate Costs
 
 # Related Work
 
-The original Cascades paper
-Microsoft "Extensible query optimizers in practice" article
-The Orca query optimizer
-CockroachDB's query optimizer
+TODO links to all of these
+
+-   The original Cascades paper
+-   Microsoft "Extensible query optimizers in practice" article
+-   The Orca query optimizer
+-   CockroachDB's query optimizer
 
 # Design
 
@@ -111,14 +124,12 @@ A Predicate Group is a set of all equivalent predicate / SQL expressions. It mig
 
 ---
 
-### Former Readme
+# Links
 
-optd (pronounced as op-dee) is a database optimizer framework. It is a cost-based optimizer that searches the plan space using the rules that the user defines and derives the optimal plan based on the cost model and the physical properties.
-
-The primary objective of optd is to explore the potential challenges involved in effectively implementing a cost-based optimizer for real-world production usage. optd implements the Columbia Cascades optimizer framework based on Yongwen Xu's master's thesis. Besides cascades, optd also provides a heuristics optimizer implementation for testing purpose.
-
-The other key objective is to implement a flexible optimizer framework which supports adaptive query optimization (aka. reoptimization) and adaptive query execution. optd executes a query, captures runtime information, and utilizes this data to guide subsequent plan space searches and cost model estimations. This progressive optimization approach ensures that queries are continuously improved, and allows the optimizer to explore a large plan space.
-
-Currently, optd is integrated into Apache Arrow Datafusion as a physical optimizer. It receives the logical plan from Datafusion, implements various physical optimizations (e.g., determining the join order), and subsequently converts it back into the Datafusion physical plan for execution.
-
-optd is a research project and is still evolving. It should not be used in production. The code is licensed under MIT.
+[Substrait]: https://substrait.io/
+[DataFusion]: https://datafusion.apache.org/
+[`enum_dispatch`]: https://docs.rs/enum_dispatch/latest/enum_dispatch/
+[`tokio`]: https://tokio.rs/
+[`diesel`]: https://diesel.rs/
+[SeaORM]: https://www.sea-ql.org/SeaORM/
+[`sqlx`]: https://docs.rs/sqlx/latest/sqlx/
